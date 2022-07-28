@@ -19,6 +19,7 @@ const char* mqtt_pass = MQTT_PASS;
 //Instantiate Objects
 WiFiClient wifiClient;
 PubSubClient client(wifiClient);
+DHT dht(DHTPIN, DHTTYPE);
 
 //Connect (or reconnect) to MQTT Server
 void reconnect() {
@@ -33,7 +34,7 @@ void reconnect() {
     if (client.connect(clientId, mqtt_user,mqtt_pass)){
       Serial.println("connected");
       // Once connected, publish an announcement...
-      client.publish("outTopic", "hello world");
+      client.publish("NodeMCU-Thermometer/Status", "On");
       // ... and resubscribe
       client.subscribe("inTopic");
     } 
@@ -73,6 +74,9 @@ void setup() {
   //Configure PubSub Client
   client.setServer(mqtt_server, 1883);
 
+  //Begin DHT Sensor
+  dht.begin();
+
 }
 
 void loop() {
@@ -80,5 +84,46 @@ void loop() {
     reconnect();
   }
   client.loop();
+  // Reading temperature or humidity takes about 250 milliseconds!
+  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+  float Humidity = dht.readHumidity();
+  // Read temperature as Celsius (the default)
+  float TempC = dht.readTemperature();
+  // Read temperature as Fahrenheit (isFahrenheit = true)
+  float f = dht.readTemperature(true);
 
+  // Check if any reads failed and exit early (to try again).
+  if (isnan(Humidity) || isnan(TempC) || isnan(f)) {
+    Serial.println(F("Failed to read from DHT sensor!"));
+    return;
+  }
+
+  // Compute heat index in Fahrenheit (the default)
+  float hif = dht.computeHeatIndex(f, Humidity);
+  // Compute heat index in Celsius (isFahreheit = false)
+  float hic = dht.computeHeatIndex(TempC, Humidity, false);
+
+/*  Serial.print(F("Humidity: "));
+  Serial.print(h);
+  Serial.print(F("%  Temperature: "));
+  Serial.print(TempC);
+  Serial.print(F("°C "));
+  Serial.print(f);
+  Serial.print(F("°F  Heat index: "));
+  Serial.print(hic);
+  Serial.print(F("°C "));
+  Serial.print(hif);
+  Serial.println(F("°F")); */
+
+  char msgBuffer[20];           // make sure this is big enough to hold your string
+  dtostrf(TempC, 6, 2, msgBuffer);
+  Serial.print("Temperature: ");
+  Serial.println(msgBuffer);
+  client.publish("NodeMCU-Thermometer/Temp1", msgBuffer);
+  dtostrf(Humidity, 6, 2, msgBuffer);
+  Serial.print("Humidity: ");
+  Serial.println(msgBuffer);
+  client.publish("NodeMCU-Thermometer/Humidity", msgBuffer);
+  
+  delay(5000);
 }
