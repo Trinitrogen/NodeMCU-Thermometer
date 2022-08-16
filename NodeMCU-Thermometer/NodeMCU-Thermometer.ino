@@ -19,24 +19,25 @@ const char* mqtt_pass = MQTT_PASS;
 //Instantiate Objects
 WiFiClient wifiClient;
 PubSubClient client(wifiClient);
-DHT dht(DHTPIN, DHTTYPE);
+DHT dht1(DHTPIN1, DHTTYPE);
+//DHT dht2(DHTPIN2, DHTTYPE);
 
 //Connect (or reconnect) to MQTT Server
 void reconnect() {
-    char* clientId = "NodeMCU-Thermometer";
+    //char* clientId = "NodeMCU-Thermometer";
+    String clientId = "NodeMCUClient-";
+    clientId += String(random(0xffff), HEX);
     Serial.print("Attempting MQTT connection to ");
     Serial.print(mqtt_server);
     Serial.print(" as Client ");
-    Serial.println(clientId);
-    delay(5000);
+    Serial.println(clientId.c_str());
+    delay(2000);
     
     // Attempt to connect
-    if (client.connect(clientId, mqtt_user,mqtt_pass)){
+    if (client.connect(clientId.c_str(), mqtt_user,mqtt_pass)){
       Serial.println("connected");
       // Once connected, publish an announcement...
       client.publish("NodeMCU-Thermometer/Status", "On");
-      // ... and resubscribe
-      client.subscribe("inTopic");
     } 
     else {
       Serial.print("failed, rc=");
@@ -74,8 +75,8 @@ void setup() {
   //Configure PubSub Client
   client.setServer(mqtt_server, 1883);
 
-  //Begin DHT Sensor
-  dht.begin();
+  //Begin DHT Sensors
+  dht1.begin();
 
 }
 
@@ -84,46 +85,29 @@ void loop() {
     reconnect();
   }
   client.loop();
-  // Reading temperature or humidity takes about 250 milliseconds!
-  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-  float Humidity = dht.readHumidity();
-  // Read temperature as Celsius (the default)
-  float TempC = dht.readTemperature();
-  // Read temperature as Fahrenheit (isFahrenheit = true)
-  float f = dht.readTemperature(true);
 
-  // Check if any reads failed and exit early (to try again).
-  if (isnan(Humidity) || isnan(TempC) || isnan(f)) {
-    Serial.println(F("Failed to read from DHT sensor!"));
+  delay(5000);
+  
+  float Humid1 = dht1.readHumidity();
+  float TempC1 = dht1.readTemperature();
+  char msgBuffer[20];
+
+  // Check if any reads on the first sensor failed and exit early (to try again).
+    if (isnan(Humid1) || isnan(TempC1)) {
+    Serial.println(F("Failed to read from DHT 1 sensor!"));
+    client.publish("NodeMCU-Thermometer/Status", "Sensor Read Failed");
+    delay(2000);
     return;
   }
+  //Send Temperature and Humity of sensor 1 to MQTT
 
-  // Compute heat index in Fahrenheit (the default)
-  float hif = dht.computeHeatIndex(f, Humidity);
-  // Compute heat index in Celsius (isFahreheit = false)
-  float hic = dht.computeHeatIndex(TempC, Humidity, false);
-
-/*  Serial.print(F("Humidity: "));
-  Serial.print(h);
-  Serial.print(F("%  Temperature: "));
-  Serial.print(TempC);
-  Serial.print(F("°C "));
-  Serial.print(f);
-  Serial.print(F("°F  Heat index: "));
-  Serial.print(hic);
-  Serial.print(F("°C "));
-  Serial.print(hif);
-  Serial.println(F("°F")); */
-
-  char msgBuffer[20];           // make sure this is big enough to hold your string
-  dtostrf(TempC, 6, 2, msgBuffer);
-  Serial.print("Temperature: ");
+  dtostrf(TempC1, 6, 2, msgBuffer);
+  Serial.print("TempC1: ");
   Serial.println(msgBuffer);
   client.publish("NodeMCU-Thermometer/Temp1", msgBuffer);
-  dtostrf(Humidity, 6, 2, msgBuffer);
-  Serial.print("Humidity: ");
+  dtostrf(Humid1, 6, 2, msgBuffer);
+  Serial.print("Humid1: ");
   Serial.println(msgBuffer);
-  client.publish("NodeMCU-Thermometer/Humidity", msgBuffer);
-  
-  delay(5000);
+  client.publish("NodeMCU-Thermometer/Humid1", msgBuffer);
+  client.publish("NodeMCU-Thermometer/Status", "On");
 }
