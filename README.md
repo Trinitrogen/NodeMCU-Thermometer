@@ -1,5 +1,5 @@
 # NodeMCU-Thermometer
-## NodeMCU based thermometer using MQTT Thermometer and a DHT11 or DHT22 to report to Home Assistant, uses an NodeMCU and DHT11 or DHT22
+## NodeMCU based thermometer using MQTT Thermometer and a DHT11 or DHT22 to report to Home Assistant
 
 Built this to monitor the temperature and humitity of my 3D Printer Filament enclosure. Requires a NodeMCU and a DHT11/DHT22 sensor. Connect the sensor to GPIO 4, then enter your WiFi and MQTT server information into the Secrets file.
 
